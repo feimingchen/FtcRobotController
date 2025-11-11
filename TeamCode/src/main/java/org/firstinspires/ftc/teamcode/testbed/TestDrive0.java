@@ -62,9 +62,9 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
  *  Also add another new file named RobotHardware.java, select the sample with that name, and select Not an OpMode.
  */
 
-@TeleOp(name="Test: Drive", group="Test")
-
-public class TestDrive extends LinearOpMode {
+@TeleOp(name="Drive0", group="Test")
+// only intake and transport control
+public class TestDrive0 extends LinearOpMode {
 
     // Create a RobotHardware object to be used to access robot hardware.
     // Prefix any hardware functions with "robot." to access this class.
@@ -72,7 +72,8 @@ public class TestDrive extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        double forward, right, rotate, intakeP, transportP;
+        double forward, right, rotate, intakeP, outtakeP, transportP;
+        boolean ballDetected = false;
 
         // initialize all the hardware, using the hardware class. See how clean and simple this is?
         robot.init();
@@ -94,18 +95,38 @@ public class TestDrive extends LinearOpMode {
             // Combine drive and turn for blended motion. Use RobotHardware class
             robot.driveRobot(forward, right, rotate);
 
+            // Color Sensor for Presence of Ball Close to the Shooting Flywheel
+            String ballColor = robot.getColorSensor();
+            if (!ballDetected)
+                ballDetected = ballColor.equals("PURPLE") || ballColor.equals("GREEN");
+
             intakeP = gamepad1.left_trigger;
-            transportP = gamepad1.right_trigger;
+            outtakeP = gamepad1.right_trigger;
+            transportP = Math.min(0.3, intakeP);
+
             robot.intakePower(intakeP);
             robot.transportPower(transportP);
+
+            if (intakeP > 0.1 && outtakeP < 0.1) // during intake phase
+                robot.outtakePower(-0.3); // prevent balls from getting ahead of the flywheel
+            else
+                robot.outtakePower(0.8 * outtakeP);
+
+            //reverse transport direction to put balls back in place
+            if (gamepad1.left_bumper) {
+                robot.outtakePower(-0.3);
+                robot.transportPower(-0.3);
+                robot.intakePower(0.5); // prevent balls from slipping out
+            }
 
             // Send telemetry messages to explain controls and show robot status
             telemetry.addData("Drive forward/backward", "Left Stick (up/down)");
             telemetry.addData("Strafe left/right", "Left Stick (left/right)");
             telemetry.addData("Turn left/right", "Right Stick (left/right)");
             telemetry.addLine();
-            telemetry.addData("Activate Intake", "Left Trigger");
-            telemetry.addData("Activate Transport", "Right Trigger");
+            telemetry.addData("Activate Intake and Transport", "Left Trigger");
+            telemetry.addData("Reverse Transport", "Left Bumper");
+            telemetry.addData("Activate Outtake", "Right Trigger");
             telemetry.addLine();
             telemetry.addData("Drive Power", "%.2f", forward);
             telemetry.addData("Strafe Power", "%.2f", right);
@@ -113,6 +134,10 @@ public class TestDrive extends LinearOpMode {
             telemetry.addLine();
             telemetry.addData("Intake Power",  "%.2f", intakeP);
             telemetry.addData("Transport Power",  "%.2f", transportP);
+            telemetry.addData("Outtake Power",  "%.2f", outtakeP);
+            telemetry.addLine();
+            telemetry.addData("Ball Detected", ballDetected);
+            telemetry.addData("Color Sensor", ballColor);
             telemetry.update();
 
             // Pace this loop so hands move at a reasonable speed.

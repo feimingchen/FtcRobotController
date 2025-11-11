@@ -29,9 +29,13 @@
 
 package org.firstinspires.ftc.teamcode.testbed;
 
+import android.graphics.Color;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
+import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 
 /*
  * This file works in conjunction with the External Hardware Class sample called: ConceptExternalHardwareClass.java
@@ -55,19 +59,26 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 public class TestRobotHardware {
 
     /* Declare OpMode members. */
-    private LinearOpMode myOpMode;   // gain access to methods in the calling OpMode.
+    private final LinearOpMode myOpMode;   // gain access to methods in the calling OpMode.
 
     // Define Motor and Servo objects  (Make them private so they can't be accessed externally)
     // This declares the four motors needed
     private DcMotor frontLeftDrive, frontRightDrive, backLeftDrive, backRightDrive;
 
-    private DcMotor intakeMotor;
+    private DcMotor intakeMotor, outtakeMotor;
 
-    private CRServo s0, s1, s2, s3;
+    private CRServo s0, s1, s2, s3, TopServo;
+
+    private NormalizedColorSensor colorSensor;
+    // Once per loop, we will update this hsvValues array. The first element (0) will contain the
+    // hue, the second element (1) will contain the saturation, and the third element (2) will
+    // contain the value. See http://web.archive.org/web/20190311170843/https://infohost.nmt.edu/tcc/help/pubs/colortheory/web/hsv.html
+    // for an explanation of HSV color.
+    final float[] hsvValues = new float[3];
 
     // Define a constructor that allows the OpMode to pass a reference to itself.
-    public TestRobotHardware(LinearOpMode opmode) {
-        myOpMode = opmode;
+    public TestRobotHardware(LinearOpMode opMode) {
+        myOpMode = opMode;
     }
 
     /**
@@ -95,13 +106,25 @@ public class TestRobotHardware {
         backLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        frontLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontRightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backRightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
         // Define and initialize ALL installed servos.
         s0 = myOpMode.hardwareMap.get(CRServo.class, "s0");
         s1 = myOpMode.hardwareMap.get(CRServo.class, "s1");
         s2 = myOpMode.hardwareMap.get(CRServo.class, "s2");
         s3 = myOpMode.hardwareMap.get(CRServo.class, "s3");
+        TopServo = myOpMode.hardwareMap.get(CRServo.class, "TopServo");
 
         intakeMotor = myOpMode.hardwareMap.get(DcMotor.class, "m1");
+        outtakeMotor = myOpMode.hardwareMap.get(DcMotor.class, "m2");
+
+        // Get a reference to our sensor object. It's recommended to use NormalizedColorSensor over
+        // ColorSensor, because NormalizedColorSensor consistently gives values between 0 and 1, while
+        // the values you get from ColorSensor are dependent on the specific sensor you're using.
+        colorSensor = myOpMode.hardwareMap.get(NormalizedColorSensor.class, "i1");
 
         myOpMode.telemetry.addData(">", "Hardware Initialized");
         myOpMode.telemetry.update();
@@ -140,9 +163,37 @@ public class TestRobotHardware {
     }
 
     public void transportPower(double mPower) {
-        s0.setPower(-mPower);
+        s0.setPower(mPower);
         s1.setPower(mPower);
-        s2.setPower(mPower);
+        s2.setPower(-mPower);
         s3.setPower(-mPower);
+        TopServo.setPower(mPower);
+    }
+
+    public void outtakePower(double mPower) {
+        outtakeMotor.setPower(mPower);
+    }
+
+    public String getColorSensor() {
+
+        // Get the normalized colors from the sensor
+        NormalizedRGBA colors = colorSensor.getNormalizedColors();
+
+        /* Use telemetry to display feedback on the driver station. We show the red, green, and blue
+         * normalized values from the sensor (in the range of 0 to 1), as well as the equivalent
+         * HSV (hue, saturation and value) values. See http://web.archive.org/web/20190311170843/https://infohost.nmt.edu/tcc/help/pubs/colortheory/web/hsv.html
+         * for an explanation of HSV color. */
+
+        // Update the hsvValues array by passing it to Color.colorToHSV()
+        Color.colorToHSV(colors.toColor(), hsvValues);
+
+        int hue = (int) hsvValues[0];
+        if (hue > 220 && hue < 320) {
+            return "PURPLE";
+        } else if (hue > 70 && hue < 170) {
+            return "GREEN";
+        }
+
+        return "Unknown";
     }
 }
