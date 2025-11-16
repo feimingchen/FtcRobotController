@@ -102,14 +102,14 @@ public class TestDrive0 extends LinearOpMode {
 
             intakeP = gamepad1.left_trigger;
             outtakeP = gamepad1.right_trigger;
-            transportP = Math.min(0.3, intakeP);
+            transportP = Math.min(0.8, intakeP);
 
             robot.intakePower(intakeP);
             robot.transportPower(transportP);
 
             if (intakeP > 0.1 && outtakeP < 0.1) // during intake phase
                 robot.outtakePower(-0.3); // prevent balls from getting ahead of the flywheel
-            else
+            else // during outtake phase
                 robot.outtakePower(0.8 * outtakeP);
 
             //reverse transport direction to put balls back in place
