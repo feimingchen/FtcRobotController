@@ -245,8 +245,8 @@ public class RobotAutoDriveByGyro_Linear extends LinearOpMode {
 
             // Set the required driving speed  (must be positive for RUN_TO_POSITION)
             // Start driving straight, and then enter the control loop
-            maxDriveSpeed = Math.abs(maxDriveSpeed);
-            moveRobot(maxDriveSpeed, 0);
+            driveSpeed = Math.abs(maxDriveSpeed);
+            moveRobot(driveSpeed, 0);
 
             // keep looping while we are still active, and BOTH motors are running.
             while (opModeIsActive() &&
