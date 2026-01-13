@@ -157,9 +157,12 @@ public class TestRobotHardware {
         s3 = myOpMode.hardwareMap.get(CRServo.class, "s3");
         TopServo = myOpMode.hardwareMap.get(CRServo.class, "TopServo");
         GateServo = myOpMode.hardwareMap.get(Servo.class,"GateServo");
+        GateServo.setPosition(GateClose);
 
         intakeMotor = myOpMode.hardwareMap.get(DcMotor.class, "m1");
         outtakeMotor = myOpMode.hardwareMap.get(DcMotor.class, "m2");
+        intakeMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        outtakeMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // Get a reference to our sensor object. It's recommended to use NormalizedColorSensor over
         // ColorSensor, because NormalizedColorSensor consistently gives values between 0 and 1, while
@@ -196,7 +199,7 @@ public class TestRobotHardware {
         double backLeftPower = forward - right + rotate;
 
         double maxPower = 1.0;
-        double maxSpeed = 0.5;  // make this slower for outreaches
+        double maxSpeed = 1.0;  // make this slower for outreaches
 
         // This is needed to make sure we don't pass > 1.0 to any wheel
         // It allows us to keep all of the motors in proportion to what they should
@@ -233,9 +236,10 @@ public class TestRobotHardware {
 
     public void shootBalls(double oPower, double tPower, double timeInSeconds) {
         holdTimer.reset();
+
         while (myOpMode.opModeIsActive() && holdTimer.time() < timeInSeconds) {
             outtakePower(oPower);
-            myOpMode.sleep(1500);
+            myOpMode.sleep(750);
             GateServo.setPosition(GateOpen); // open gate
             myOpMode.sleep(500);
             intakePower(oPower);
@@ -293,6 +297,7 @@ public class TestRobotHardware {
      *                   If a relative angle is required, add/subtract from the current robotHeading.
      */
     public void driveStraight(double maxDriveSpeed,
+                              boolean strafe,
                               double distance,
                               double heading,
                               boolean collectBalls,
@@ -302,10 +307,18 @@ public class TestRobotHardware {
 
         // Determine new target position, and pass to motor controller
         int moveCounts = (int)(distance * COUNTS_PER_INCH);
-        frontLeftDrive.setTargetPosition(frontLeftDrive.getCurrentPosition() + moveCounts);
-        frontRightDrive.setTargetPosition(frontRightDrive.getCurrentPosition() + moveCounts);
-        backLeftDrive.setTargetPosition(backLeftDrive.getCurrentPosition() + moveCounts);
-        backRightDrive.setTargetPosition(backRightDrive.getCurrentPosition() + moveCounts);
+
+        if (strafe) {
+            frontLeftDrive.setTargetPosition(frontLeftDrive.getCurrentPosition() + moveCounts);
+            frontRightDrive.setTargetPosition(frontRightDrive.getCurrentPosition() - moveCounts);
+            backLeftDrive.setTargetPosition(backLeftDrive.getCurrentPosition() - moveCounts);
+            backRightDrive.setTargetPosition(backRightDrive.getCurrentPosition() + moveCounts);
+        } else {
+            frontLeftDrive.setTargetPosition(frontLeftDrive.getCurrentPosition() + moveCounts);
+            frontRightDrive.setTargetPosition(frontRightDrive.getCurrentPosition() + moveCounts);
+            backLeftDrive.setTargetPosition(backLeftDrive.getCurrentPosition() + moveCounts);
+            backRightDrive.setTargetPosition(backRightDrive.getCurrentPosition() + moveCounts);
+        }
 
         frontLeftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         frontRightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -321,7 +334,6 @@ public class TestRobotHardware {
         if (collectBalls) {
             intakePower(INTAKE_POWER);
             transportPower(TRANSPORT_POWER);
-            outtakePower(-0.3);
         }
 
         // keep looping while we are still active, and motors are running.
@@ -344,13 +356,13 @@ public class TestRobotHardware {
 
         // Stop all motion & Turn off RUN_TO_POSITION
         driveRobot(0, 0, 0);
+
         if (collectBalls) {
-            myOpMode.sleep(1000);
-            transportPower(-0.5);
-            myOpMode.sleep(300);
-            outtakePower(0.0);
-            transportPower(0.0);
             intakePower(0.0);
+            transportPower(0.0);
+            TopServo.setPower(-0.5);
+            myOpMode.sleep(500);
+            TopServo.setPower(0.0);
         }
 
         frontLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
